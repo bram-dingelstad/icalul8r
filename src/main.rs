@@ -15,7 +15,6 @@ use clokwerk::{AsyncScheduler, TimeUnits};
 
 use dotenv::dotenv;
 
-use futures::executor::block_on;
 
 use lazy_static::lazy_static;
 
@@ -58,7 +57,7 @@ async fn main() -> tide::Result<()> {
 
     let mut scheduler = AsyncScheduler::new();
 
-    scheduler.every(30.minutes()).run(|| block_on(update_calendar()));
+    scheduler.every(30.minutes()).run(|| async { update_calendar().await });
 
     tokio::spawn(async move {
         loop {
@@ -209,13 +208,9 @@ fn parse_date(date_object: &serde_json::Value, is_end: bool) -> Option<DateObjec
 
     let is_date = string.chars().count() <= 10;
 
-    println!("{}", string);
-
-    // ;VALUE=DATE:20220111
     let result = if is_date {
         DateObject::Date(NaiveDate::parse_from_str(string, "%Y-%m-%d")
             .unwrap() + Duration::days(is_end.then_some(1).unwrap_or(0)))
-    // :20221211T230000Z
     } else {
         let datetime = DateTime::parse_from_rfc3339(string).unwrap();
         let local_datetime = chrono_tz::Europe::Amsterdam.timestamp(datetime.timestamp(), 0);
